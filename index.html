@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>瓦力工厂-C++变量交换原理演示</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 保留原样式，仅调整代码高亮颜色以匹配C++风格 */
+        .code-keyword { color: #007acc; } /* C++关键字颜色（类似VS Code） */
+        .code-var { color: #e83e8c; }      /* 变量名颜色 */
+        .code-value { color: #28a745; }    /* 值颜色 */
+        .code-comment { color: #6a737d; }  /* 注释颜色 */
+        
+        /* 其他样式与之前一致，省略重复部分 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+            width: 100%;
+            max-width: 1000px;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.8rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 1.3rem;
+        }
+        
+        .demo-container {
+            display: flex;
+            justify-content: space-between;
+            margin: 30px 0;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .demo-section {
+            width: 48%;
+            min-width: 300px;
+            background: rgba(243, 246, 249, 0.7);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+        
+        .demo-title {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .cups-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            height: 300px;
+            position: relative;
+            padding: 0 10px;
+        }
+        
+        .cup {
+            width: 90px;
+            height: 170px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 2;
+        }
+        
+        .cup-body {
+            width: 70px;
+            height: 140px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 3px solid #2c3e50;
+            border-top: none;
+            border-radius: 0 0 20px 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .liquid {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 0;
+            transition: height 0.8s ease-in-out;
+        }
+        
+        .orange-juice {
+            background: linear-gradient(to top, #ff9d00, #ff6600);
+        }
+        
+        .apple-juice {
+            background: linear-gradient(to top, #c1e1c1, #4CAF50);
+        }
+        
+        .cup-label {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-top: 10px;
+            color: #2c3e50;
+        }
+        
+        .variables-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            height: 300px;
+            padding: 0 10px;
+        }
+        
+        .variable {
+            width: 110px;
+            height: 110px;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.4rem;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.8s ease;
+        }
+        
+        .variable::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, rgba(255,255,255,0.1), rgba(255,255,255,0.3));
+        }
+        
+        .variable-a {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+        
+        .variable-b {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+        
+        .variable-temp {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+        }
+        
+        .variable-label {
+            font-size: 1.3rem;
+            margin-bottom: 8px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+        }
+        
+        .variable-value {
+            font-size: 2rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .step-indicator {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px auto;
+            width: 90%;
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+        
+        .code-box {
+            background: #1e1e1e; /* C++风格代码框背景（类似VS Code） */
+            color: #d4d4d4;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: left;
+            margin: 20px auto;
+            width: 90%;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            overflow-x: auto;
+        }
+        
+        .code-line {
+            padding: 5px 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        
+        .active-code {
+            background: rgba(37, 99, 235, 0.1); /* C++风格高亮背景 */
+            box-shadow: 0 0 10px rgba(37, 99, 235, 0.2);
+        }
+        
+        .controls {
+            margin: 30px 0;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(155, 89, 182, 0.4);
+            margin: 0 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(155, 89, 182, 0.6);
+        }
+        
+        .btn:active {
+            transform: translateY(1px);
+        }
+        
+        .btn-next {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+        
+        .btn-next:hover {
+            box-shadow: 0 8px 20px rgba(52, 152, 219, 0.6);
+        }
+        
+        .btn-reset {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+        
+        .btn-reset:hover {
+            box-shadow: 0 8px 20px rgba(231, 76, 60, 0.6);
+        }
+        
+        @media (max-width: 768px) {
+            .demo-section {
+                width: 100%;
+            }
+            
+            .cups-container, .variables-container {
+                height: 250px;
+            }
+            
+            .cup {
+                width: 80px;
+                height: 150px;
+            }
+            
+            .cup-body {
+                width: 60px;
+                height: 120px;
+            }
+            
+            .cup-label {
+                font-size: 1rem;
+            }
+            
+            .variable {
+                width: 100px;
+                height: 100px;
+            }
+            
+            .variable-label {
+                font-size: 1.2rem;
+            }
+            
+            .variable-value {
+                font-size: 1.8rem;
+            }
+            
+            .step-indicator {
+                font-size: 1.1rem;
+            }
+            
+            .code-box {
+                font-size: 1rem;
+            }
+            
+            .btn {
+                padding: 10px 25px;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-exchange-alt"></i> 瓦力工厂-C++变量交换原理演示</h1>
+        <p class="subtitle">通过饮料杯交换理解C++变量交换 - 每按一次"下一步"按钮演示一个步骤</p>
+        
+        <div class="demo-container">
+            <!-- 饮料杯交换（保持不变） -->
+            <div class="demo-section">
+                <h2 class="demo-title"><i class="fas fa-glass-whiskey"></i> 饮料杯交换</h2>
+                <div class="cups-container">
+                    <div class="cup">
+                        <div class="cup-body">
+                            <div class="liquid orange-juice" id="liquidA" style="height: 100%"></div>
+                        </div>
+                        <div class="cup-label">杯子A (橙汁)</div>
+                    </div>
+                    <div class="cup">
+                        <div class="cup-body">
+                            <div class="liquid apple-juice" id="liquidB" style="height: 100%"></div>
+                        </div>
+                        <div class="cup-label">杯子B (苹果汁)</div>
+                    </div>
+                    <div class="cup">
+                        <div class="cup-body">
+                            <div class="liquid" id="liquidTemp" style="height: 0%"></div>
+                        </div>
+                        <div class="cup-label">临时杯 (空)</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 变量交换（C++风格） -->
+            <div class="demo-section">
+                <h2 class="demo-title"><i class="fas fa-code"></i> C++变量交换</h2>
+                <div class="variables-container">
+                    <div class="variable variable-a">
+                        <div class="variable-label">变量 a</div> <!-- C++变量名小写习惯 -->
+                        <div class="variable-value" id="valueA">10</div>
+                    </div>
+                    <div class="variable variable-b">
+                        <div class="variable-label">变量 b</div>
+                        <div class="variable-value" id="valueB">25</div>
+                    </div>
+                    <div class="variable variable-temp">
+                        <div class="variable-label">临时变量 temp</div>
+                        <div class="variable-value" id="valueTemp">?</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 步骤指示器 -->
+        <div class="step-indicator" id="stepIndicator">
+            步骤 0: 初始状态 - 准备交换
+        </div>
+        
+        <!-- C++代码框（核心修改部分） -->
+        <div class="code-box">
+            <div class="code-line" id="codeLine1"><span class="code-comment">// 初始值定义（C++）</span></div>
+            <div class="code-line" id="codeLine2"><span class="code-keyword">int</span> <span class="code-var">a</span> = <span class="code-value">10</span>; <span class="code-comment">// 变量a初始化为10</span></div>
+            <div class="code-line" id="codeLine3"><span class="code-keyword">int</span> <span class="code-var">b</span> = <span class="code-value">25</span>; <span class="code-comment">// 变量b初始化为25</span></div>
+            <div class="code-line" id="codeLine4"><span class="code-keyword">int</span> <span class="code-var">temp</span>; <span class="code-comment">// 声明临时变量temp（未初始化）</span></div>
+            <div class="code-line" id="codeLine5">&nbsp;</div>
+            <div class="code-line" id="codeLine6"><span class="code-comment">// 交换过程（C++经典三步法）</span></div>
+            <div class="code-line" id="codeLine7"><span class="code-var">temp</span> = <span class="code-var">a</span>; <span class="code-comment">// 步骤1: 将a的值保存到temp</span></div>
+            <div class="code-line" id="codeLine8"><span class="code-var">a</span> = <span class="code-var">b</span>; <span class="code-comment">// 步骤2: 将b的值赋给a</span></div>
+            <div class="code-line" id="codeLine9"><span class="code-var">b</span> = <span class="code-var">temp</span>; <span class="code-comment">// 步骤3: 将temp的值赋给b</span></div>
+        </div>
+        
+        <!-- 控制按钮 -->
+        <div class="controls">
+            <button class="btn btn-next" id="nextBtn"><i class="fas fa-arrow-right"></i> 下一步</button>
+            <button class="btn btn-reset" id="resetBtn"><i class="fas fa-redo"></i> 重置</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 元素获取（保持不变）
+            const liquidA = document.getElementById('liquidA');
+            const liquidB = document.getElementById('liquidB');
+            const liquidTemp = document.getElementById('liquidTemp');
+            const valueA = document.getElementById('valueA');
+            const valueB = document.getElementById('valueB');
+            const valueTemp = document.getElementById('valueTemp');
+            const nextBtn = document.getElementById('nextBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const stepIndicator = document.getElementById('stepIndicator');
+            const codeLines = document.querySelectorAll('.code-line');
+            
+            // 状态变量（保持不变）
+            let step = 0;
+            let a = 10;
+            let b = 25;
+            let temp;
+            
+            // 更新变量显示（保持不变）
+            function updateVariables() {
+                valueA.textContent = a ?? '?'; // 用??处理null/undefined
+                valueB.textContent = b ?? '?';
+                valueTemp.textContent = temp ?? '?';
+            }
+            
+            // 重置状态（保持不变）
+            function reset() {
+                step = 0;
+                a = 10;
+                b = 25;
+                temp = undefined;
+                
+                // 重置饮料杯
+                liquidA.style.height = '100%';
+                liquidA.className = 'liquid orange-juice';
+                liquidB.style.height = '100%';
+                liquidB.className = 'liquid apple-juice';
+                liquidTemp.style.height = '0%';
+                liquidTemp.className = 'liquid';
+                
+                // 重置步骤指示器
+                stepIndicator.textContent = "步骤 0: 初始状态 - 准备交换";
+                
+                // 重置代码高亮（适配C++代码行）
+                codeLines.forEach(line => line.classList.remove('active-code'));
+                codeLines[1].classList.add('active-code'); // 初始值: int a = 10;
+                codeLines[2].classList.add('active-code'); // 初始值: int b = 25;
+                
+                // 更新变量显示
+                updateVariables();
+                
+                // 启用下一步按钮
+                nextBtn.disabled = false;
+            }
+            
+            // 下一步逻辑（保持不变，仅代码高亮行适配）
+            function nextStep() {
+                step++;
+                codeLines.forEach(line => line.classList.remove('active-code'));
+                
+                switch(step) {
+                    case 1:
+                        // 步骤1: a→temp（对应C++代码行7）
+                        stepIndicator.textContent = "步骤 1: 将a(10)的值保存到temp / temp = a";
+                        liquidA.style.height = '0%';
+                        liquidTemp.style.height = '100%';
+                        liquidTemp.className = 'liquid orange-juice';
+                        temp = a;
+                        a = null;
+                        codeLines[6].classList.add('active-code'); // 高亮temp = a;
+                        break;
+                    case 2:
+                        // 步骤2: b→a（对应C++代码行8）
+                        stepIndicator.textContent = "步骤 2: 将b(25)的值赋给a / a = b";
+                        liquidB.style.height = '0%';
+                        liquidA.style.height = '100%';
+                        liquidA.className = 'liquid apple-juice';
+                        a = b;
+                        b = null;
+                        codeLines[7].classList.add('active-code'); // 高亮a = b;
+                        break;
+                    case 3:
+                        // 步骤3: temp→b（对应C++代码行9）
+                        stepIndicator.textContent = "步骤 3: 将temp(10)的值赋给b / b = temp";
+                        liquidTemp.style.height = '0%';
+                        liquidB.style.height = '100%';
+                        liquidB.className = 'liquid orange-juice';
+                        b = temp;
+                        temp = undefined;
+                        codeLines[8].classList.add('active-code'); // 高亮b = temp;
+                        break;
+                    case 4:
+                        stepIndicator.textContent = "交换完成! a(25) 和 b(10) 已交换（C++风格）";
+                        nextBtn.disabled = true;
+                        break;
+                }
+                
+                updateVariables();
+            }
+            
+            // 事件绑定（保持不变）
+            nextBtn.addEventListener('click', nextStep);
+            resetBtn.addEventListener('click', reset);
+            
+            // 初始化（保持不变）
+            reset();
+        });
+    </script>
+</body>
+</html>
